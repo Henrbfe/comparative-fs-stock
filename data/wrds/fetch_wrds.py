@@ -8,12 +8,11 @@ import wrds
 import pandas as pd
 from dotenv import load_dotenv
 
-# Set base path for save files to be working directory of this file
 load_dotenv()
+# Set base path for save files to be working directory of this file
 BASE_PATH = Path(__file__).parent.resolve()
 
-# db = wrds.Connection(wrds_username=os.getenv("wrds_username"))
-db = wrds.Connection(wrds_username="henribfe")
+db = wrds.Connection(wrds_username=os.getenv("wrds_username"))
 
 # WRDS tables
 SECD = "comp_global_daily.g_secd"
@@ -29,7 +28,7 @@ COMP_NA = "comp_na_daily_all.company"
 EXCHG_NA = "comp_na_daily_all.r_ex_codes"
 
 
-def sql_to_df(sql: str):
+def sql_to_df(sql: str, convert_numerics=True):
     """Run sql query on wrds database and convert the result to pandas dataframe.
 
     Args:
@@ -40,61 +39,59 @@ def sql_to_df(sql: str):
     """
     with db.engine.begin() as conn:
         result = conn.execute(sql)
-    return pd.DataFrame(result)
+    df = pd.DataFrame(result)
+    if convert_numerics:
+        numeric_cols = df.select_dtypes("number").columns.values
+        for col in numeric_cols:
+            df[col] = df[col].apply(float)
+    return df
 
 
 def fetch_data_selected_country(
-        country_code : str, table : str, date_range : tuple[str, str],
-        save_file : str, save_result : bool, use_saved_result : bool
+        country_code : str, table : str, date_range : tuple[str, str], save_file : str
     ) -> pd.DataFrame:
     """Fetch wrds data for given table and country code using sql."""
 
     save_path = f"{BASE_PATH}/saves/{save_file}"
 
-    if os.path.exists(save_path) and use_saved_result:
-        return pd.read_csv(save_path, dtype={"gvkey" : "O"}, index_col=0)
-    result =  sql_to_df(
-        "select * " +
-        f"from {table} " +
-        f"where (fic = '{country_code}') " +
-        f"and datadate between '{date_range[0]}' and '{date_range[1]}';"
-    )
-    if save_result:
+    if not os.path.exists(save_path):
+        result =  sql_to_df(
+            "select * " +
+            f"from {table} " +
+            f"where (fic = '{country_code}') "
+            f"and datadate between '{date_range[0]}' and '{date_range[1]}';"
+        )
         if not os.path.exists(f"{BASE_PATH}/saves/"):
             os.mkdir(f"{BASE_PATH}/saves/")
         result.to_csv(save_path)
-    return result
+
+    return pd.read_csv(save_path, dtype={"gvkey" : "O"}, index_col=0)
+
 
 def fetch_data_selected_exchanges(
-        exchange_codes : tuple[int], table : str, date_range : tuple[str, str],
-        save_file : str, save_result : bool, use_saved_result : bool
+        exchange_codes : tuple[int], table : str, date_range : tuple[str, str], save_file : str
 ) -> pd.DataFrame:
     """Fetch wrds data for companies offered on the given exchange code using sql."""
 
     save_path = f"{BASE_PATH}/saves/{save_file}"
 
-    if os.path.exists(save_path) and use_saved_result:
-        return pd.read_csv(save_path, dtype={"gvkey" : "O"}, index_col=0)
-
-    result = sql_to_df(
-        "select * " +
-        f"from {table} " +
-        f"where (exchg in {exchange_codes} " +
-        f"and datadate between '{date_range[0]}' and '{date_range[1]}';"
-    )
-
-    if save_result:
+    if not os.path.exists(save_path):
+        result = sql_to_df(
+            "select * " +
+            f"from {table} " +
+            f"where (exchg in {exchange_codes} " +
+            f"and datadate between '{date_range[0]}' and '{date_range[1]}';"
+        )
         if not os.path.exists(f"{BASE_PATH}/saves/"):
             os.mkdir(f"{BASE_PATH}/saves/")
         result.to_csv(save_path)
-    return result
+    return pd.read_csv(save_path, dtype={"gvkey" : "O"}, index_col=0)
 
 
 # ------ Technical ------
 
 def get_securities_selected_country(
-        country_code : str, global_region, date_range,
-        save_result = True, use_saved_result = True
+        country_code : str, global_region: bool, date_range: tuple[str, str], companies: list[str]
     ) -> pd.DataFrame:
     """ Get quarterly fundamental data for all companies belonging to
     the given country code. """
@@ -102,13 +99,13 @@ def get_securities_selected_country(
     save_file = f"sec_{country_code}_{date_range[0]}_{date_range[1]}.csv"
     table = SECD if global_region else SECD_NA
 
-    return fetch_data_selected_country(
-        country_code, table, date_range, save_file, save_result, use_saved_result
+    df = fetch_data_selected_country(
+        country_code, table, date_range, save_file
     )
+    return df[df["gvkey"].isin(companies)]
 
 def get_securities_selected_exchanges(
-    exchange_codes : list[str], filename : str, global_region : bool, date_range : tuple[str, str],
-    save_result = True, use_saved_result = True
+    exchange_codes : list[str], filename : str, global_region : bool, date_range : tuple[str, str]
 ) -> pd.DataFrame:
     """ Get quarterly fundamental data for all companies belonging to
     the given country code. """
@@ -117,15 +114,14 @@ def get_securities_selected_exchanges(
     table = SECD if global_region else SECD_NA
 
     return fetch_data_selected_exchanges(
-        exchange_codes, table, date_range, save_file, save_result, use_saved_result
+        exchange_codes, table, date_range, save_file
     )
 
 
 # ------ Fundamental ------
 
 def get_company_fundamentals_selected_country(
-        country_code : str, global_region, date_range,
-        save_result = True, use_saved_result = True
+        country_code : str, global_region, date_range
     ) -> pd.DataFrame:
     """ Get quarterly fundamental data for all companies belonging to
     the given country code."""
@@ -134,12 +130,11 @@ def get_company_fundamentals_selected_country(
     table = FUNDQ if global_region else FUNDQ_NA
 
     return fetch_data_selected_country(
-        country_code, table, date_range, save_file, save_result, use_saved_result
+        country_code, table, date_range, save_file
     )
 
 def get_company_fundamentals_selected_exchanges(
-        exchange_codes : list[str], filename : str, global_region : bool, date_range : tuple[str, str],
-        save_result = True, use_saved_result = True
+        exchange_codes : list[str], filename : str, global_region : bool, date_range : tuple[str, str]
     ) -> pd.DataFrame:
     """ Get quarterly fundamental data for all companies belonging to
     the given country code. """
@@ -148,7 +143,7 @@ def get_company_fundamentals_selected_exchanges(
     table = FUNDQ if global_region else FUNDQ_NA
 
     return fetch_data_selected_exchanges(
-        exchange_codes, table, date_range, save_file, save_result, use_saved_result
+        exchange_codes, table, date_range, save_file
     )
 
 
@@ -165,7 +160,8 @@ def get_company_information_selected_country(
     return sql_to_df(
         "select * " +
         f"from {table} " +
-        f"where (fic = '{country_code}');"
+        f"where (fic = '{country_code}');",
+        False
     )
 
 def get_company_information_selected_companies(
@@ -216,4 +212,3 @@ def get_company_information_all_countries() -> pd.DataFrame:
         f"select * from {COMP_NA};"
     )
     return pd.concat([global_companies, na_companies])
-

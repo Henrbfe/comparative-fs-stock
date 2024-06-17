@@ -9,6 +9,8 @@ import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 
+from data.constants import COUNTRY_CODE_MAPPINGS
+
 BASE_URL = "http://dataservices.imf.org/REST/SDMX_JSON.svc/"
 DATA_METHOD = "CompactData/"
 SERIES_INFORMATION = "DataStructure/"
@@ -65,6 +67,7 @@ def send_imf_request(
     """
     url = (f"{BASE_URL}{DATA_METHOD}{series}/" +
         f"{selector}?startPeriod={start_period}&endPeriod={end_period}")
+    print(url)
     res = requests.get(
         url,
         timeout=100,
@@ -83,9 +86,6 @@ def send_imf_request(
     indicators = res.json()["CompactData"]["DataSet"]["Series"]
     res.close()
 
-    # entries = [
-    #     {"time" : f"{obs['@TIME_PERIOD']}-01", indicators[0][category_name] : obs["@OBS_VALUE"]}
-    #     for obs in indicators[0]["Obs"]]
     entries = []
 
     for ind in indicators:
@@ -115,32 +115,32 @@ FINANCIAL_INDICATORS_SERIES = "IFS"
 
 
 def get_cpi_selected_country(country_code : str, freq : str, start_period : str, end_period : str):
-    selector = f"{freq}.{country_code}"
+    alpha2_country_code = COUNTRY_CODE_MAPPINGS[
+        country_code
+    ]
+    selector = f"{freq}.{alpha2_country_code}"
 
     save_path = f"{BASE_PATH}/saves/{CONSUMER_PRICE_INDEX_SERIES}_{selector}_{start_period}_{end_period}.csv"
 
-    if os.path.exists(save_path):
-        return pd.read_csv(save_path, index_col=0)
+    if not os.path.exists(save_path):
+        df = send_imf_request(
+            CONSUMER_PRICE_INDEX_SERIES,
+            selector,
+            "@INDICATOR",
+            start_period,
+            end_period)
 
-    df = send_imf_request(
-        CONSUMER_PRICE_INDEX_SERIES,
-        selector,
-        "@INDICATOR",
-        start_period,
-        end_period)
+        df.to_csv(save_path)
+    return pd.read_csv(save_path, index_col=0)
 
-    df.to_csv(save_path)
-    return df
 
-def get_primary_commodity_prices(commodities : list[str], freq : str, start_period : str, end_period : str):
-    measure = "IX" # index, can use USD
-    selector = f"{freq}..{'+'.join(commodities)}.{measure}"
+def get_primary_commodity_prices(freq : str, start_period : str, end_period : str):
+    measure = "IX"
+    selector = f"{freq}...{measure}"
 
     save_path = f"{BASE_PATH}/saves/{COMMODITY_PRICE_SERIES}_{selector}_{start_period}_{end_period}"
 
-    if os.path.exists(save_path):
-        return pd.read_csv(save_path, index_col=0)
-
-    df = send_imf_request(COMMODITY_PRICE_SERIES, selector, "@COMMODITY", start_period, end_period)
-    df.to_csv(save_path)
-    return df
+    if not os.path.exists(save_path):
+        df = send_imf_request(COMMODITY_PRICE_SERIES, selector, "@COMMODITY", start_period, end_period)
+        df.to_csv(save_path)
+    return pd.read_csv(save_path, index_col=0)

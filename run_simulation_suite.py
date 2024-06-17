@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import sys
+import os
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,8 +10,7 @@ from sklearn.linear_model import SGDRegressor
 import tensorflow as tf
 from data.constants import DATE_COL
 from feature_selection.feature_sets import FEATURE_SETS, categorize_features
-from data.load_data import date_based_split
-from data.load_data import load_data_from_csv
+from data.load_data import load_data_from_csv, date_based_split
 from model.hyperparameters import HYPERPARAMS
 from model.svr import StockSVR
 from model.tft.data_formatters.stock import StockFormatter, format_inputs
@@ -90,8 +90,8 @@ def createTFT(x_train, y_train, dataset, features, feature_set_name):
     print("Creating TFT...")
     traindf = x_train.copy()
     traindf[PRED_COL]=y_train
-    traindf = traindf.append(pd.Series(0, index=df.columns), ignore_index=True)
-    traindf = traindf.append(pd.Series(1, index=df.columns), ignore_index=True)
+    traindf = traindf.append(pd.Series(0, index=traindf.columns), ignore_index=True)
+    traindf = traindf.append(pd.Series(1, index=traindf.columns), ignore_index=True)
 
     technical_features, fundamental_features, macro_features, sector_features = categorize_features(features, dataset)
     if len(sector_features) == 0:
@@ -144,77 +144,50 @@ def createXGB(dataset, feature_set_name):
     return xgb
 
 
-def create_SGD(dataset, feature_set_name):
-    params = HYPERPARAMS[dataset]["sgd"]
-    sgd = SGDRegressor(
-        max_iter=params["max_iter"],
-        eta0=params["eta0"],
-        n_iter_no_change=params["n_iter_no_change"],
-        early_stopping= params["early_stopping"],
-        )
-    sgd.train = lambda x1, y1, x2, y2: sgd.fit(x1,y1)
-    sgd.forward = sgd.predict
-    sgd.save =lambda x: print("save sgd")
-    sgd._get_name = lambda: "SGD"
-    sgd.custom_name = f"SGD_model_{dataset}_{feature_set_name}"
-    sgd._get_custom_name = lambda: sgd.custom_name
-    return sgd
-
-
 if __name__ == "__main__":
-    """
-    Inputs: 
-        - dataset: 'nasnor', 'jpn' or 'us'.
-        - feature set: "all", "var_filter", "mrmr_filter", "forward", "backward", "ga", "pso", "mgo"
-        - Model: 'xgb', 'tft', 'tft_hpo', 'svr' or 'sgd.
-        - N_itr: Number of iterations in hyperparametertuning for tft_hpo.
-        - N_rows: Number of rows to read from dataset.
-    """
-    dataset = (sys.argv[1]).lower() if len(sys.argv) > 1 and sys.argv[1] else "nasnor"
-    feature_set = (sys.argv[2]).lower() if len(sys.argv) > 2 and sys.argv[2] else "all"
-    model = (sys.argv[3]).lower() if len(sys.argv) > 3 else "xgb"
-    version = sys.argv[4] if len(sys.argv) > 4 else "1"
+    dataset_name = (sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1] else "jpn"
+    dataset_filename = (sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else "dataset/JPN_2010-2024.csv"
+    feature_set = (sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else "all"
+    model = (sys.argv[4]) if len(sys.argv) > 4 else "xgb"
     n_itr = int(sys.argv[5]) if len(sys.argv) > 5 else 250
     nrows = int(sys.argv[6]) if len(sys.argv) > 6 else None
-    if dataset not in ["usa", "nasnor", "jpn"]:
-        raise ValueError("Did not recognize input. dataset: ",dataset)
+    if not os.path.exists(dataset_filename):
+        raise ValueError(f"Could not locate dataset file {dataset_filename}.")
 
     print(f"Found {use_gpu} gpus")
-    features = FEATURE_SETS[dataset][feature_set]
+    features = FEATURE_SETS[dataset_name][feature_set]
 
     df, features = load_data_from_csv(
-        dataset_name=dataset,
+        dataset_filename=dataset_filename,
         nrows=nrows,
         features=features,
         target=PRED_COL)
-    
+
 
     if model == 'tft' or model == 'tft_hpo' or model == 'tfthpo' or model == 'tft-hpo':
-        df['region'] = dataset # to avoid empty static dataset
+        df['region'] = dataset_name # to avoid empty static dataset
         df = get_date_info(df)
     x_train, y_train, x_validation, y_validation, x_test, y_test = date_based_split(df=df, target_column=PRED_COL, test_size=0.2, validation_size=0.25, show=False, day_of_week=3)
     if model == "xgb" or model == "xgboost":
-        sim_model = createXGB(dataset, feature_set)
+        sim_model = createXGB(dataset_name, feature_set)
     elif model == "tft":
-        sim_model = createTFT(x_train, y_train, dataset, features, feature_set)
+        sim_model = createTFT(x_train, y_train, dataset_name, features, feature_set)
     elif model == "tft_hpo" or model == "tfthpo" or model == "tft-hpo":
-        sim_model = createTFTwithHyperParamOpt(x_train, y_train, x_validation, y_validation, n_itr, dataset, features, feature_set)
+        sim_model = createTFTwithHyperParamOpt(x_train, y_train, x_validation, y_validation, n_itr, dataset_name, features, feature_set)
     elif model == "svr" or model == "svm":
-        sim_model = createSVR(dataset, feature_set)
-    elif model == "sgd":
-        sim_model = create_SGD(dataset, feature_set)
+        sim_model = createSVR(dataset_name, feature_set)
     else:
         raise ValueError("Did not recognize input. Model: ",model)
 
     sim_suite = SimulationSuite( #uncomment line 485 to write to file
         model=sim_model,
-        name=f"{model}_{dataset}_{feature_set}",
+        name=f"{model}_{dataset_name}_{feature_set}",
         pred_col=PRED_COL,
         date_col=DATE_COL,
         company_col=COMPANY_COL,
     )
-    print(f"Running simulation on {dataset} with {feature_set}: {features}")
-    path = sim_suite.run_full_test(model=sim_model, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_val=x_validation, y_val=y_validation, version=version)
+    print(f"Running simulation on {dataset_name} with {feature_set}: {features}")
+    path = sim_suite.run_full_test(model=sim_model, x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test, x_val=x_validation, y_val=y_validation)
     print("Finished simulation")
 
     if model == "xgb" or model == "xgboost":

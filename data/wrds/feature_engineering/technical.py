@@ -106,32 +106,10 @@ def stochastic_oscillator_d(
 
 def calculate_all_technical_indicators(
     df: pd.DataFrame, filename: str, use_saved_result=True
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, list[str]]:
     """Performs all calculations for technical indicators given daily price data."""
 
     save_path_df = f"{BASE_PATH}/saves/technical_" + f"{filename}.csv"
-
-    # Load previous results if available
-    if os.path.exists(save_path_df) and use_saved_result:
-        df = pd.read_csv(save_path_df, dtype={"gvkey": "O"}, index_col=0)
-        df["datadate"] = pd.to_datetime(df["datadate"])
-        return df
-
-    df = df.sort_values(by=["gvkey", "datadate"])
-
-    df["return_1d"] = derive_rolling_return(df, 1)
-    df["return_1w"] = derive_rolling_return(df, 5)
-    df["sharpe_1w"] = derive_sharpe_ratio(df, 5)
-    df["momentum_1d"] = derive_momentum(df, 1)
-    df["momentum_1w"] = derive_momentum(df, 5)
-    df["momentum_2w"] = derive_momentum(df, 10)
-    df["momentum_4w"] = derive_momentum(df, 20)
-    df["rsi"] = derive_relative_strength_index(df)
-    df["k_oscillator_1w"] = stochastic_oscillator_k(df, 5)
-    df["d_oscillator_4w"] = stochastic_oscillator_d(df, 20)
-    df["k_oscillator_2w"] = stochastic_oscillator_k(df, 10)
-    df["d_oscillator_6w"] = stochastic_oscillator_d(df, 30, "k_oscillator_2w")
-
     sec_cols = [
         "prccd",
         "cshoc",
@@ -143,12 +121,32 @@ def calculate_all_technical_indicators(
         "momentum_2w",
         "momentum_4w",
         "rsi",
+        "sharpe_1w",
         "d_oscillator_4w",
         "d_oscillator_6w",
     ]
 
+    # Load previous results if available
+    if os.path.exists(save_path_df) and use_saved_result:
+        df = pd.read_csv(save_path_df, dtype={"gvkey": "O"}, index_col=0)
+        df["datadate"] = pd.to_datetime(df["datadate"])
+        return df, sec_cols
+
+    df = df.sort_values(by=["gvkey", "datadate"])
+
+    df["return_1d"] = derive_rolling_return(df, 1)
+    df["return_1w"] = derive_rolling_return(df, 5)
+    df["momentum_1d"] = derive_momentum(df, 1)
+    df["momentum_1w"] = derive_momentum(df, 5)
+    df["momentum_2w"] = derive_momentum(df, 10)
+    df["momentum_4w"] = derive_momentum(df, 20)
+    df["rsi"] = derive_relative_strength_index(df)
+    df["sharpe_1w"] = derive_sharpe_ratio(df, 5)
+    df["k_oscillator_1w"] = stochastic_oscillator_k(df, 5)
+    df["d_oscillator_4w"] = stochastic_oscillator_d(df, 20)
+    df["k_oscillator_2w"] = stochastic_oscillator_k(df, 10)
+    df["d_oscillator_6w"] = stochastic_oscillator_d(df, 30, "k_oscillator_2w")
+
     df.to_csv(save_path_df)
 
     return df, sec_cols
-
-

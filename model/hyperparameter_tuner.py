@@ -14,10 +14,8 @@ estimators = {
     "svr": SVR(),
     "linsvr" : LinearSVR(),
     "svr_nystroem": make_pipeline(Nystroem(), LinearSVR()),
-    # "svr_thunder": ThunderSVR(),
     "svc": SVC(),
     "xgboost": XGBRegressor(tree_method="hist", device="cuda"),
-    "sgd": SGDRegressor(),
 }
 
 def tune_hyperparams_grid_search(

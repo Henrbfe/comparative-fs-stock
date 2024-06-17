@@ -2,7 +2,6 @@
 
 DATE_COL = "datadate"
 TARGET = "return_1w"
-COMPANY_ID = "gvkey"
 
 ## Used for preprocessing
 COMPANY_INFO_COLS = [
@@ -64,8 +63,6 @@ FUNDAMENTAL_BASE_COLS = [
     "xopry",
     "xsgay",
 ]
-NON_NAN_PORTION_THRESH_FUND = 0.7
-NON_NAN_PORTION_THRESH_MACRO = 0.9
 
 ## Feature sets in final datasets
 
@@ -974,7 +971,6 @@ OTHER_FEATURES = {
 }
 
 
-## Other
 COUNTRY_CODE_MAPPINGS = {
     "AND": "AD",
     "ARE": "AE",
@@ -1226,12 +1222,3 @@ COUNTRY_CODE_MAPPINGS = {
     "ZMB": "ZM",
     "ZWE": "ZW",
 }
-
-NASDAQ_NORDIC_EXCGH_CODES = (
-    167,  # NASDAQ OMX Helsinki Ltd
-    236,  # NASDAQ OMX Riga
-    237,  # NASDAQ OMX Iceland
-    256,  # NASDAQ OMX Nordic
-    261,  # NASDAQ OMX Tallinn
-    274,  # NASDAQ OMX Vilnius
-)

@@ -1,3 +1,5 @@
+""" Script for running feature selection."""
+
 import sys
 from feature_selection.experiment_hub import (
     FeatureSelectionExperimentHub,
@@ -7,7 +9,7 @@ from data.load_data import load_data_from_csv, date_based_split
 
 if __name__ == "__main__":
     dataset_name = sys.argv[1] if len(sys.argv) > 1 else "jpn"
-    dataset_filename = sys.argv[2] if len(sys.argv) > 2 else "jpn"
+    dataset_filename = sys.argv[2] if len(sys.argv) > 2 else "datasets/JPN_2010-2024.csv"
     method_name = (
         sys.argv[3]
         if len(sys.argv) > 3 and sys.argv[3] in parameter_config

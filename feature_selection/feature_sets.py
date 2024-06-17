@@ -297,6 +297,21 @@ JPN_MGO = [
 ]
 
 FEATURE_SETS = {
+    "fra": {
+        "mrmr_filter": [
+            'cshoc', 'PAGRI', 'cshtrd', 'PCPIHARC_IX',
+            'PFSHMEAL', 'd_oscillator_4w', 'PPMETA', 'ocf_qtr_sale_qtr',
+            'ebit_sale', 'PGOLD', 'd_oscillator_6w', 'PSUGAUSA', 'PCHANA',
+            'rsi', 'PBEEF', 'PTIN', 'PLAMB', 'PALLMETA', 'PSILVER',
+            'PSEAF', 'PCPIHAA_PC_CP_A_PT', 'PSALM', 'PCPIHARC_PC_PP_PT',
+            'PCPIHAHO_PC_CP_A_PT', 'PCOPP', 'PCOCO', 'PCPIA_PC_CP_A_PT',
+            'PCPIHO_PC_CP_A_PT', 'PMANGELE', 'PCPIHAED_IX', 'PCPIEC_PC_PP_PT',
+            'pi_nix', 'ebit_int', 'PMETA', 'PEXGMETA', 'momentum_1d', 'PCOALAU',
+            'PCPIHAF_PC_CP_A_PT', 'PIORECR', 'PENTM', 'PCPIHA_PC_CP_A_PT',
+            'PCPIR_PC_PP_PT', 'PTOMATO', 'PCOIL', 'PCPIHAC_PC_PP_PT', 'PCPIF_PC_CP_A_PT',
+            'PCPI_IX', 'PINDU', 'PPOIL'
+        ]
+    },
     "nasnor": {
         "all": TECHNICAL_FEATURES["nasnor"]
         + FUNDAMENTAL_FEATURES["nasnor"]

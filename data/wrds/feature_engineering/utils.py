@@ -73,7 +73,5 @@ def remove_insufficent_cols(df: pd.DataFrame, cols: set[str], thresh=0.05) -> se
     """Remove columns that have more than 5% nan values."""
     nan_counts = df[list(cols)].isna().sum()
     insufficient_cols = nan_counts[nan_counts >= int(thresh * df.shape[0])].index.values
-    print(f"Nan count statistics: {nan_counts[insufficient_cols].describe()}")
     df = df.drop(columns=insufficient_cols)
-    print(f"Removed insufficient columns: {insufficient_cols}")
     return cols.difference(insufficient_cols)
