@@ -1,7 +1,7 @@
 # Pipeline for creating stock datasets, applying feature selection, and simulate stock portfolios using ML models.
 This project is made for the Master thesis at NTNU:
 _Comparative analysis of feature selection in stock price prediction_
-In case of issues, please submit to the public Github.
+In case of issues, please submit to the public Github. Note that the APIs of WRDS and IMF appear to be unstable at times, notify maintainers if there are issues with dataset creation.
 
 ## Structure
 - Data: create datasets for a given country
